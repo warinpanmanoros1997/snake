@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Snake Game - Phaser.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+</head>
+<body>
+
+<script>
+const config = {
+    type: Phaser.AUTO,
+    width: 400,
+    height: 400,
+    backgroundColor: '#3498db', // สีฟ้า
+    physics: { default: 'arcade' },
+    scene: { preload, create, update }
+};
+
+const game = new Phaser.Game(config);
+
+let snake;
+let food;
+let cursors;
+let direction = 'RIGHT';
+let newDirection = 'RIGHT';
+let speed = 150;
+let lastMoveTime = 0;
+let snakeBody = [];
+
+function preload() {}
+
+function create() {
+    cursors = this.input.keyboard.createCursorKeys();
+
+    // เริ่มงูที่ตำแหน่งตรงกลาง
+    snake = this.add.group();
+    const startX = 200;
+    const startY = 200;
+    addSegment(this, startX, startY);
+
+    // สร้างอาหาร
+    spawnFood(this);
+}
+
+function update(time) {
+    handleInput();
+
+    if (time >= lastMoveTime + speed) {
+        moveSnake(this);
+        lastMoveTime = time;
+    }
+}
+
+function handleInput() {
+    if (cursors.left.isDown && direction !== 'RIGHT') newDirection = 'LEFT';
+    else if (cursors.right.isDown && direction !== 'LEFT') newDirection = 'RIGHT';
+    else if (cursors.up.isDown && direction !== 'DOWN') newDirection = 'UP';
+    else if (cursors.down.isDown && direction !== 'UP') newDirection = 'DOWN';
+}
+
+function moveSnake(scene) {
+    direction = newDirection;
+
+    const head = snakeBody[0];
+    let x = head.x;
+    let y = head.y;
+
+    if (direction === 'LEFT') x -= 10;
+    else if (direction === 'RIGHT') x += 10;
+    else if (direction === 'UP') y -= 10;
+    else if (direction === 'DOWN') y += 10;
+
+    // ตรวจสอบชนตัวเองหรือขอบ
+    if (x < 0 || x >= 400 || y < 0 || y >= 400 || checkCollision(x, y)) {
+        // alert("Game Over!");
+        // window.location.reload();
+        return;
+    }
+
+    addSegment(scene, x, y, true);
+
+    // กินอาหาร
+    if (x === food.x && y === food.y) {
+        spawnFood(scene);
+    } else {
+        const tail = snakeBody.pop();
+        tail.destroy();
+    }
+}
+
+function addSegment(scene, x, y, unshift = false) {
+    const segment = scene.add.rectangle(x, y, 10, 10, 0x00ff00).setOrigin(0);
+    if (unshift) snakeBody.unshift(segment);
+    else snakeBody.push(segment);
+}
+
+function spawnFood(scene) {
+    const x = Phaser.Math.Between(0, 39) * 10;
+    const y = Phaser.Math.Between(0, 39) * 10;
+
+    if (food) food.destroy();
+    food = scene.add.rectangle(x, y, 10, 10, 0xff0000).setOrigin(0);
+}
+
+function checkCollision(x, y) {
+    return snakeBody.some(segment => segment.x === x && segment.y === y);
+}
+</script>
+
+</body>
+</html>

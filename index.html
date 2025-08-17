@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Snake 32bit Responsive</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+</head>
+
+<body>
+  <script>
+    let food;
+    class HowToPlayScene extends Phaser.Scene {
+      constructor() { super('HowToPlayScene'); }
+      preload() {
+        this.load.image('bg', 'background.png'); // Background
+      }
+      create() {
+        const bg = this.add.tileSprite(0, 0, this.sys.game.config.width, this.sys.game.config.height, 'bg')
+          .setOrigin(0);
+        const instructions = [
+          "HOW TO PLAY",
+          "",
+          "Use Arrow Keys to move the snake",
+          "Eat the food to grow and gain points",
+          "Avoid hitting the walls or yourself",
+          "",
+          "Press B to go back"
+        ];
+
+        const centerX = this.cameras.main.width / 2;
+        const centerY = this.cameras.main.height / 2;
+
+        instructions.forEach((line, index) => {
+          this.add.text(centerX, centerY - 100 + index * 30, line, {
+            font: '24px Arial',
+            fill: index === 0 ? '#00ff00' : '#ffffff',
+            align: 'center'
+          }).setOrigin(0.5);
+        });
+
+        this.input.keyboard.once('keydown-B', () => {
+          this.scene.start('StartScene');
+        });
+      }
+    }
+
+
+    class StartScene extends Phaser.Scene {
+      constructor() { super('StartScene'); }
+
+      preload() {
+        this.load.image('bg', 'background.png'); // Background
+        this.load.image('snake', 'snake.png');   // Snake
+        this.load.image('food', 'food.png');     // Food
+      }
+
+      create() {
+        const bg = this.add.tileSprite(0, 0, this.sys.game.config.width, this.sys.game.config.height, 'bg')
+          .setOrigin(0);
+        this.addCenteredText(-50, 'SNAKE 32bit', 48, '#00ff00');
+        this.addCenteredText(0, 'Press SPACE to Start', 24, '#ffffff');
+        this.addCenteredText(40, 'Press H for How to Play', 24, '#ffcc00');
+
+        this.input.keyboard.on('keydown-SPACE', () => this.scene.start('GameScene'));
+        this.input.keyboard.on('keydown-H', () => this.scene.start('HowToPlayScene'));
+      }
+
+      addCenteredText(yOffset, text, fontSize = 32, color = '#ffffff') {
+        const centerX = this.cameras.main.width / 2;
+        const centerY = this.cameras.main.height / 2;
+        return this.add.text(centerX, centerY + yOffset, text, {
+          font: `${fontSize}px Arial`,
+          fill: color
+        }).setOrigin(0.5);
+      }
+    }
+
+    class GameScene extends Phaser.Scene {
+      constructor() {
+        super('GameScene');
+        this.snake = [];
+        this.direction = 'RIGHT';
+        this.nextDirection = 'RIGHT';
+        this.speed = 150;
+        this.score = 0;
+      }
+
+      create() {
+        this.bg = this.add.tileSprite(0, 0, this.sys.game.config.width, this.sys.game.config.height, 'bg').setOrigin(0);
+
+        this.snake = [];
+        this.direction = 'RIGHT';
+        this.nextDirection = 'RIGHT';
+        this.score = 0;
+
+        this.scoreText = this.add.text(10, 10, 'Score: 0', {
+          font: '24px Arial', fill: '#ffffff', stroke: '#000000', strokeThickness: 3
+        });
+
+        const tileSize = this.getTileSize();
+        const head = this.createSnakeSegment(0, 0);
+        this.snake.push(head);
+
+        this.spawnFood();
+
+        this.cursors = this.input.keyboard.createCursorKeys();
+
+        this.timer = this.time.addEvent({ delay: this.speed, callback: () => this.move(), loop: true });
+
+        // Pause
+        let pauseText, startText, backText;
+        this.input.keyboard.on('keydown-P', () => {
+          if (this.timer.paused) {
+            this.timer.paused = false;
+            pauseText?.destroy();
+            startText?.destroy();
+            backText?.destroy();
+          } else {
+            this.timer.paused = true;
+            pauseText = this.addCenteredText(-50, 'PAUSE', 48, '#ffffff');
+            startText = this.addCenteredText(20, 'Press P to Resume', 24, '#ffffff');
+            backText = this.addCenteredText(60, 'Press E to go to Start Page', 20, '#ffcc00');
+          }
+        });
+        this.input.keyboard.on('keydown-E', () => {
+          if (this.timer.paused) {
+            this.scene.start('StartScene');
+          }
+        });
+
+        // Resize listener
+        this.scale.on('resize', (gameSize) => {
+          this.bg.setSize(gameSize.width, gameSize.height);
+          this.scoreText.setPosition(10, 10);
+        });
+      }
+
+      getTileSize() {
+        const smaller = Math.min(this.sys.game.config.width, this.sys.game.config.height);
+        return Math.floor(smaller / 25);
+      }
+
+      createSnakeSegment(x, y) {
+        const tileSize = this.getTileSize();
+        return this.add.image(x, y, 'snake').setOrigin(0).setDisplaySize(tileSize, tileSize);
+      }
+
+      spawnFood() {
+        const tileSize = this.getTileSize();
+        const maxX = Math.floor(this.sys.game.config.width / tileSize) - 1;
+        const maxY = Math.floor(this.sys.game.config.height / tileSize) - 1;
+        const x = Phaser.Math.Between(0, maxX) * tileSize;
+        const y = Phaser.Math.Between(0, maxY) * tileSize;
+
+        food?.destroy();
+        food = this.add.image(x, y, 'food').setOrigin(0).setDisplaySize(tileSize, tileSize);
+      }
+
+      addCenteredText(yOffset, text, fontSize = 32, color = '#ffffff') {
+        const centerX = this.cameras.main.width / 2;
+        const centerY = this.cameras.main.height / 2;
+        return this.add.text(centerX, centerY + yOffset, text, {
+          font: `${fontSize}px Arial`,
+          fill: color
+        }).setOrigin(0.5);
+      }
+
+      move() {
+        const tileSize = this.getTileSize();
+        this.direction = this.nextDirection;
+
+        const head = this.snake[0];
+        let x = head.x;
+        let y = head.y;
+
+        if (this.direction === 'LEFT') x -= tileSize;
+        else if (this.direction === 'RIGHT') x += tileSize;
+        else if (this.direction === 'UP') y -= tileSize;
+        else if (this.direction === 'DOWN') y += tileSize;
+
+        // Check Crash Border Screen
+        if (x < 0 || x >= this.sys.game.config.width || y < 0 || y >= this.sys.game.config.height) {
+          this.gameOver();
+          return;
+        }
+
+        // Check Crash Snake
+        for (let segment of this.snake) {
+          if (segment.x === x && segment.y === y) {
+            this.gameOver();
+            return;
+          }
+        }
+
+        const newHead = this.createSnakeSegment(x, y);
+        this.snake.unshift(newHead);
+
+        if (x === food.x && y === food.y) {
+          this.score += 10;
+          this.scoreText.setText('Score: ' + this.score);
+          this.spawnFood();
+        } else {
+          const tail = this.snake.pop();
+          tail.destroy();
+        }
+      }
+
+      update() {
+        if (this.cursors.left.isDown && this.direction !== 'RIGHT') this.nextDirection = 'LEFT';
+        else if (this.cursors.right.isDown && this.direction !== 'LEFT') this.nextDirection = 'RIGHT';
+        else if (this.cursors.up.isDown && this.direction !== 'DOWN') this.nextDirection = 'UP';
+        else if (this.cursors.down.isDown && this.direction !== 'UP') this.nextDirection = 'DOWN';
+      }
+
+      gameOver() {
+        this.timer.paused = true;
+        this.addCenteredText(-50, 'GAME OVER', 48, '#ff0000');
+        this.addCenteredText(20, 'Press SPACE to Restart', 24, '#ffffff');
+
+        this.input.keyboard.once('keydown-SPACE', () => this.scene.restart());
+      }
+    }
+
+    // Game config
+    const config = {
+  type: Phaser.AUTO,
+  width: window.innerWidth,
+  height: window.innerHeight,
+  backgroundColor: '#222222',
+  scene: [StartScene, HowToPlayScene, GameScene],
+  scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH }
+};
+
+    const game = new Phaser.Game(config);
+  </script>
+</body>
+
+</html>
